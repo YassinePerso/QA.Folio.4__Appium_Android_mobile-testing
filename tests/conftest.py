@@ -6,7 +6,7 @@ from appium.options.android import UiAutomator2Options
 @pytest.fixture
 def driver():
     options = UiAutomator2Options()
-    options.platform_name = "Android"
+    options.platform_name = "Android"   
     options.automation_name = "UiAutomator2"
     options.device_name = "pixel_test"
     options.app_package = "com.saucelabs.mydemoapp.android"
