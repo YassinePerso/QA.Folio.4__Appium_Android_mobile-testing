@@ -1,3 +1,5 @@
+from email.mime import text
+
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -33,3 +35,9 @@ class BasePage:
     #Clique sur un élément par son ID d'accessibilité
     def click_by_acc_id(self, acc_id):
         self.find_by_acc_id(acc_id).click()
+        
+    #Clique sur un élément par son texte
+    def click_by_text(self, text):
+        self.wait.until(
+            EC.presence_of_element_located((AppiumBy.ANDROID_UIAUTOMATOR, f'new UiSelector().text("{text}")'))
+        ).click()
