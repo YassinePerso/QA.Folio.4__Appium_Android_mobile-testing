@@ -2,9 +2,9 @@ name: Mobile Tests
 
 on:
   push:
-    branches: [main]
+    branches: [First_commit]
   pull_request:
-    branches: [main]
+    branches: [First_commit]
 
 jobs:
   test:
