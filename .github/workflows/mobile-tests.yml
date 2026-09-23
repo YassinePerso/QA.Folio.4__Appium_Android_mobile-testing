@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [First_commit]
 
+# This workflow runs mobile tests on an Android emulator using Appium and pytest.
 jobs:
   test:
     runs-on: macos-15-intel
