@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: macos-latest
 
+    # Installe l'environment Android pour exécuter les tests sur un émulateur Android
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
