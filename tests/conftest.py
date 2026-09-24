@@ -1,3 +1,4 @@
+import time
 import pytest
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
@@ -37,4 +38,5 @@ def reset_app_state(driver):
     driver.terminate_app(APP_PACKAGE)
     driver.execute_script("mobile: clearApp", {"appId": APP_PACKAGE})
     driver.activate_app(APP_PACKAGE)
+    time.sleep(1.5)
     yield
