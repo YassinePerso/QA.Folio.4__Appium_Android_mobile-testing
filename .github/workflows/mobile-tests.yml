@@ -2,15 +2,15 @@ name: Mobile Tests
 
 on:
   push:
-    branches: [main]
+    branches: [First_commit]
   pull_request:
-    branches: [main]
+    branches: [First_commit]
 
 jobs:
   test:
-    runs-on: macos-latest
+    runs-on: macos-15-intel
+    timeout-minutes: 45
 
-    # Installe l'environment Android pour exécuter les tests sur un émulateur Android
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,13 +34,57 @@ jobs:
         run: |
           pip install Appium-Python-Client pytest
 
-      - name: Run tests on Android emulator
+      - name: Download app APK
+        run: |
+          curl -L -o mda.apk https://github.com/saucelabs/my-demo-app-android/releases/download/2.2.0/mda-2.2.0-25.apk
+
+      - name: Run tests on Android emulator (attempt 1)
+        id: attempt1
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
           arch: x86_64
+          force-avd-creation: false
+          emulator-boot-timeout: 300
+          disable-animations: true
           script: |
+            adb install mda.apk
+            appium &
+            sleep 10
+            pytest tests/ -v
+
+      - name: Run tests on Android emulator (attempt 2)
+        id: attempt2
+        if: steps.attempt1.outcome == 'failure'
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-boot-timeout: 300
+          disable-animations: true
+          script: |
+            adb install mda.apk
+            appium &
+            sleep 10
+            pytest tests/ -v
+
+      - name: Run tests on Android emulator (attempt 3, final)
+        if: steps.attempt2.outcome == 'failure'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-boot-timeout: 300
+          disable-animations: true
+          script: |
+            adb install mda.apk
             appium &
             sleep 10
             pytest tests/ -v
