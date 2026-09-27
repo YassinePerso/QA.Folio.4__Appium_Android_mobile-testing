@@ -8,8 +8,9 @@ on:
 
 jobs:
   test:
-    # Linux + KVM : recommandé par la doc de android-emulator-runner,
-    runs-on: ubuntu-latest
+    # Linux + KVM : recommandé par la doc de android-emulator-runner.
+    # Version figée pour éviter la bascule automatique vers Ubuntu 26.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     env:
@@ -65,7 +66,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ env.API_LEVEL }}-google_apis-x86_64
+          key: avd-${{ env.API_LEVEL }}-google_apis-x86_64-pixel6
 
       - name: Create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -74,6 +75,8 @@ jobs:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: x86_64
+          # Même écran qu'en local (1080x2400, densité 420)
+          profile: pixel_6
           ram-size: 4096M
           cores: 4
           force-avd-creation: false
@@ -87,6 +90,8 @@ jobs:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: x86_64
+          # Même écran qu'en local (1080x2400, densité 420)
+          profile: pixel_6
           ram-size: 4096M
           cores: 4
           force-avd-creation: false
