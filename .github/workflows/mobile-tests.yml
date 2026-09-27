@@ -80,7 +80,10 @@ jobs:
           ram-size: 4096M
           cores: 4
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # -gpu off plutôt que swiftshader_indirect : ce dernier provoque des
+          # crashs de rendu (FrameBuffer.cpp: Failed to find ColorBuffer) en CI
+          # headless, cf. reactivecircus/android-emulator-runner#358
+          emulator-options: -no-window -gpu off -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Snapshot AVD généré pour le cache."
 
@@ -95,7 +98,10 @@ jobs:
           ram-size: 4096M
           cores: 4
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # -gpu off plutôt que swiftshader_indirect : ce dernier provoque des
+          # crashs de rendu (FrameBuffer.cpp: Failed to find ColorBuffer) en CI
+          # headless, cf. reactivecircus/android-emulator-runner#358
+          emulator-options: -no-snapshot-save -no-window -gpu off -noaudio -no-boot-anim -camera-back none
           emulator-boot-timeout: 600
           disable-animations: true
           script: bash ci/run-tests.sh
