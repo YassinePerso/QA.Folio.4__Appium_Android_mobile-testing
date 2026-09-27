@@ -5,4 +5,7 @@ set -euo pipefail
 adb wait-for-device
 adb install -r mda.apk
 
+adb shell wm size
+adb shell wm density
+
 pytest tests/ -v --alluredir=allure-results
