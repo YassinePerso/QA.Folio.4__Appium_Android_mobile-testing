@@ -8,83 +8,103 @@ on:
 
 jobs:
   test:
-    runs-on: macos-15-intel
+    # Linux + KVM : recommandé par la doc de android-emulator-runner,
+    runs-on: ubuntu-latest
     timeout-minutes: 45
+
+    env:
+      API_LEVEL: 34
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Enable KVM (accélération matérielle de l'émulateur)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 'lts/*'
 
-      - name: Install Appium
+      - name: Install Appium + UiAutomator2
         run: |
           npm install -g appium
           appium driver install uiautomator2
 
       - name: Install Python dependencies
-        run: |
-          pip install Appium-Python-Client pytest
+        run: pip install -r requirements.txt
 
       - name: Download app APK
+        run: curl -L -o mda.apk https://github.com/saucelabs/my-demo-app-android/releases/download/2.2.0/mda-2.2.0-25.apk
+
+      # Le serveur Appium n'a pas besoin de l'émulateur pour démarrer :
+      # on le lance avant, et on attend qu'il réponde vraiment (pas un sleep à l'aveugle)
+      - name: Start Appium server
         run: |
-          curl -L -o mda.apk https://github.com/saucelabs/my-demo-app-android/releases/download/2.2.0/mda-2.2.0-25.apk
+          nohup appium > appium.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -s http://127.0.0.1:4723/status && exit 0
+            sleep 2
+          done
+          echo "Appium n'a pas démarré" && cat appium.log && exit 1
 
-      - name: Run tests on Android emulator (attempt 1)
-        id: attempt1
-        continue-on-error: true
+      # Cache de l'AVD : évite de recréer et de refaire un boot à froid à chaque run
+      - name: AVD cache
+        uses: actions/cache@v5
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.API_LEVEL }}-google_apis-x86_64
+
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: x86_64
+          ram-size: 4096M
+          cores: 4
           force-avd-creation: false
-          emulator-boot-timeout: 300
-          disable-animations: true
-          script: |
-            adb install mda.apk
-            appium &
-            sleep 10
-            pytest tests/ -v
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Snapshot AVD généré pour le cache."
 
-      - name: Run tests on Android emulator (attempt 2)
-        id: attempt2
-        if: steps.attempt1.outcome == 'failure'
-        continue-on-error: true
+      - name: Run tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: x86_64
+          ram-size: 4096M
+          cores: 4
           force-avd-creation: false
-          emulator-boot-timeout: 300
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-boot-timeout: 600
           disable-animations: true
-          script: |
-            adb install mda.apk
-            appium &
-            sleep 10
-            pytest tests/ -v
+          script: bash ci/run-tests.sh
 
-      - name: Run tests on Android emulator (attempt 3, final)
-        if: steps.attempt2.outcome == 'failure'
-        uses: reactivecircus/android-emulator-runner@v2
+      - name: Upload Appium log
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          force-avd-creation: false
-          emulator-boot-timeout: 300
-          disable-animations: true
-          script: |
-            adb install mda.apk
-            appium &
-            sleep 10
-            pytest tests/ -v
+          name: appium-log
+          path: appium.log
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
