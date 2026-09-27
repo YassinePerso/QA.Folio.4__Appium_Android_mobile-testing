@@ -8,8 +8,9 @@ on:
 
 jobs:
   test:
-    # Linux + KVM : recommandé par la doc de android-emulator-runner,
-    runs-on: ubuntu-latest
+    # Linux + KVM : recommandé par la doc de android-emulator-runner.
+    # Version figée pour éviter la bascule automatique vers Ubuntu 26.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     env:
@@ -65,7 +66,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ env.API_LEVEL }}-google_apis-x86_64
+          key: avd-${{ env.API_LEVEL }}-google_apis-x86_64-pixel6
 
       - name: Create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -74,10 +75,15 @@ jobs:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: x86_64
+          # Même écran qu'en local (1080x2400, densité 420)
+          profile: pixel_6
           ram-size: 4096M
           cores: 4
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # -gpu off plutôt que swiftshader_indirect : ce dernier provoque des
+          # crashs de rendu (FrameBuffer.cpp: Failed to find ColorBuffer) en CI
+          # headless, cf. reactivecircus/android-emulator-runner#358
+          emulator-options: -no-window -gpu off -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Snapshot AVD généré pour le cache."
 
@@ -87,10 +93,15 @@ jobs:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: x86_64
+          # Même écran qu'en local (1080x2400, densité 420)
+          profile: pixel_6
           ram-size: 4096M
           cores: 4
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # -gpu off plutôt que swiftshader_indirect : ce dernier provoque des
+          # crashs de rendu (FrameBuffer.cpp: Failed to find ColorBuffer) en CI
+          # headless, cf. reactivecircus/android-emulator-runner#358
+          emulator-options: -no-snapshot-save -no-window -gpu off -noaudio -no-boot-anim -camera-back none
           emulator-boot-timeout: 600
           disable-animations: true
           script: bash ci/run-tests.sh
